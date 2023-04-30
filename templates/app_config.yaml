@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  SchoolManagementApp:
+    Type: AWS::AppConfig::Application
+    Properties:
+      Description: "AppConfig Application for feature toggles"
+      Name: mgt
+
+  SchoolManagementDevEnv:
+    Type: AWS::AppConfig::Environment
+    Properties:
+      ApplicationId: !Ref SchoolManagementApp
+      Description: "Development Environment for the App Config Store"
+      Name: dev
+
+  SchoolManagementConfigProfile:
+    Type: AWS::AppConfig::ConfigurationProfile
+    Properties:
+      ApplicationId: !Ref SchoolManagementApp
+      Name: features
+      LocationUri: "hosted"
+
+  HostedConfigVersion:
+    Type: AWS::AppConfig::HostedConfigurationVersion
+    Properties:
+      ApplicationId: !Ref SchoolManagementApp
+      ConfigurationProfileId: !Ref SchoolManagementConfigProfile
+      Description: 'A sample hosted configuration version'
+      Content: |
+        {
+        "weekend_maintenance": {
+          "default": false,
+          "rules": {
+            "maintenance time": {
+              "when_match": true,
+              "conditions": [
+                {
+                  "action": "SCHEDULE_BETWEEN_DAYS_OF_WEEK",
+                  "key": "CURRENT_DAY_OF_WEEK",
+                  "value": {
+                    "DAYS": [
+                      "SATURDAY",
+                      "SUNDAY"
+                    ],
+                    "TIMEZONE": "America/New_York"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ContentType: 'application/json'
+  ConfigDeployment:
+    Type: AWS::AppConfig::Deployment
+    Properties:
+      ApplicationId: !Ref SchoolManagementApp
+      ConfigurationProfileId: !Ref SchoolManagementConfigProfile
+      ConfigurationVersion: !Ref HostedConfigVersion
+      DeploymentStrategyId: "AppConfig.AllAtOnce"
+      EnvironmentId: !Ref SchoolManagementDevEnv
